@@ -9,23 +9,134 @@ function normalizeText(text) {
     .replace(/\n{3,}/g, '\n\n');
 }
 
-/**
- * Преобразование текста в blockquote формат
- */
-function toBlockquote(text) {
-  const normalized = normalizeText(text);
-  return normalized
-    .split('\n')
-    .map(line => `> ${line}`)
-    .join('\n');
+function escapeInlineText(text) {
+  return text.replace(/([*_`])/g, '\\$1');
 }
 
-/**
- * Преобразование текста в fenced code block
- */
-function toCodeBlock(text) {
-  const normalized = normalizeText(text);
-  return `\`\`\`text\n${normalized}\n\`\`\``;
+function wrapInlineCode(text) {
+  const hasBacktick = text.includes('`');
+  const fence = hasBacktick ? '``' : '`';
+  return `${fence}${text}${fence}`;
+}
+
+function getCodeBlockLanguage(codeEl) {
+  if (!codeEl) return '';
+  const className = codeEl.className || '';
+  const match = className.match(/language-([a-z0-9_-]+)/i);
+  return match ? match[1] : '';
+}
+
+function normalizeMarkdown(md) {
+  return md
+    .replace(/[ \t]+\n/g, '\n')
+    .replace(/\n{3,}/g, '\n\n')
+    .trim();
+}
+
+function nodeToMarkdown(node, ctx) {
+  if (!node) return '';
+
+  if (node.nodeType === Node.TEXT_NODE) {
+    return escapeInlineText(node.textContent || '');
+  }
+
+  if (node.nodeType !== Node.ELEMENT_NODE) {
+    return '';
+  }
+
+  const tag = node.tagName.toLowerCase();
+
+  if (tag === 'br') {
+    return '\n';
+  }
+
+  if (tag === 'code' && node.parentElement?.tagName.toLowerCase() !== 'pre') {
+    return wrapInlineCode(node.textContent || '');
+  }
+
+  if (tag === 'pre') {
+    const codeEl = node.querySelector('code') || node;
+    const language = getCodeBlockLanguage(codeEl);
+    const codeText = codeEl.textContent || '';
+    return `\n\n\`\`\`${language}\n${codeText}\n\`\`\`\n\n`;
+  }
+
+  if (tag === 'strong' || tag === 'b') {
+    return `**${childrenToMarkdown(node, ctx)}**`;
+  }
+
+  if (tag === 'em' || tag === 'i') {
+    return `*${childrenToMarkdown(node, ctx)}*`;
+  }
+
+  if (tag === 'a') {
+    const href = node.getAttribute('href') || '';
+    const text = childrenToMarkdown(node, ctx) || href;
+    return href ? `[${text}](${href})` : text;
+  }
+
+  if (tag === 'h1' || tag === 'h2' || tag === 'h3' || tag === 'h4' || tag === 'h5' || tag === 'h6') {
+    const level = Number(tag.replace('h', '')) || 1;
+    const hashes = '#'.repeat(level);
+    return `\n\n${hashes} ${childrenToMarkdown(node, ctx)}\n\n`;
+  }
+
+  if (tag === 'blockquote') {
+    const inner = normalizeMarkdown(childrenToMarkdown(node, ctx));
+    const lines = inner.split('\n').map((line) => `> ${line}`);
+    return `\n\n${lines.join('\n')}\n\n`;
+  }
+
+  if (tag === 'ul' || tag === 'ol') {
+    const isOrdered = tag === 'ol';
+    const items = [];
+    const prevList = ctx.list;
+    ctx.list = { ordered: isOrdered, index: 1, indent: (prevList?.indent || 0) + 2 };
+
+    Array.from(node.children).forEach((child) => {
+      if (child.tagName.toLowerCase() === 'li') {
+        items.push(nodeToMarkdown(child, ctx));
+      }
+    });
+
+    ctx.list = prevList;
+    return `\n${items.join('')}\n`;
+  }
+
+  if (tag === 'li') {
+    const list = ctx.list || { ordered: false, index: 1, indent: 2 };
+    const bullet = list.ordered ? `${list.index}. ` : '- ';
+    if (list.ordered) {
+      list.index += 1;
+    }
+    const indent = ' '.repeat(Math.max(0, list.indent - 2));
+    const content = normalizeMarkdown(childrenToMarkdown(node, ctx));
+    const lines = content.split('\n');
+    const first = `${indent}${bullet}${lines.shift() || ''}`;
+    const rest = lines.map((line) => `${indent}  ${line}`).join('\n');
+    return `${first}${rest ? `\n${rest}` : ''}\n`;
+  }
+
+  if (tag === 'p') {
+    const content = childrenToMarkdown(node, ctx);
+    return `\n\n${content}\n\n`;
+  }
+
+  return childrenToMarkdown(node, ctx);
+}
+
+function childrenToMarkdown(node, ctx) {
+  const parts = [];
+  node.childNodes.forEach((child) => {
+    parts.push(nodeToMarkdown(child, ctx));
+  });
+  return parts.join('');
+}
+
+function htmlToMarkdown(root) {
+  const ctx = { list: null };
+  const markdown = childrenToMarkdown(root, ctx);
+  return normalizeMarkdown(markdown);
 }
 
 /**
@@ -153,7 +264,9 @@ function createBubbleButton() {
       showToast('Nothing to copy');
       return;
     }
-    const markdown = toBlockquote(text);
+    const range = selection && selection.rangeCount > 0 ? selection.getRangeAt(0) : null;
+    const fragment = range ? range.cloneContents() : null;
+    const markdown = fragment ? htmlToMarkdown(fragment) : normalizeText(text);
     const success = await copyToClipboard(markdown);
     if (success) {
       showToast('Copied to Markdown');
@@ -257,6 +370,30 @@ function findButtonContainer(messageElement) {
     return toolbar;
   }
 
+  // Вариант 1.2: Панель действий ответа (частичный набор кнопок)
+  const actionButton = container.querySelector('[data-testid$="turn-action-button"]');
+  if (actionButton) {
+    return actionButton.closest('div');
+  }
+
+  const actionCandidates = Array.from(container.querySelectorAll('button[aria-label]'))
+    .filter((btn) => {
+      const label = (btn.getAttribute('aria-label') || '').toLowerCase();
+      return (
+        label.includes('copy') ||
+        label.includes('good response') ||
+        label.includes('bad response') ||
+        label.includes('share') ||
+        label.includes('more actions')
+      );
+    })
+    .map((btn) => btn.parentElement)
+    .filter(Boolean);
+
+  if (actionCandidates.length > 0) {
+    return actionCandidates[0];
+  }
+
   // Ищем контейнер с кнопками - обычно это div с несколькими button элементами
   const buttons = container.querySelectorAll('button, [role="button"]');
   if (buttons.length > 0) {
@@ -335,6 +472,10 @@ function addCopyMDButtonToMessage(messageElement) {
   if (!isExtensionEnabled) {
     return;
   }
+  const roleElement = messageElement.closest('[data-message-author-role]');
+  if (roleElement && roleElement.getAttribute('data-message-author-role') !== 'assistant') {
+    return;
+  }
   // Проверяем, не добавлена ли уже кнопка
   if (messageElement.querySelector('.ce-copy-md-button') || messageElement.dataset.ceCopyMdInjected === '1') {
     return;
@@ -359,7 +500,7 @@ function addCopyMDButtonToMessage(messageElement) {
       return;
     }
 
-    const markdown = toCodeBlock(textContent);
+    const markdown = htmlToMarkdown(messageContainer);
     const success = await copyToClipboard(markdown);
     
     if (success) {
@@ -420,7 +561,10 @@ function processAssistantMessages() {
       } else {
         const text = article.innerText || '';
         if (text.length > 50 && !article.querySelector('input, textarea')) {
-          scheduleAddButton(article);
+          const role = article.getAttribute?.('data-message-author-role');
+          if (role === 'assistant') {
+            scheduleAddButton(article);
+          }
         }
       }
     });
@@ -508,6 +652,9 @@ const observer = new MutationObserver((mutations) => {
     setTimeout(processAssistantMessages, 100);
   }
 });
+
+// Перепроверяем через чуть большее время на случай позднего рендера панели действий
+setTimeout(processAssistantMessages, 1500);
 
 // Начинаем наблюдение за изменениями DOM
 observer.observe(document.body, {
