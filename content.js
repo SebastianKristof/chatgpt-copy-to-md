@@ -33,6 +33,18 @@ function normalizeMarkdown(md) {
     .trim();
 }
 
+function normalizeInlineMarkdown(md) {
+  return md.replace(/\n{2,}/g, '\n').trim();
+}
+
+function extractKatexSource(node) {
+  const annotation = node.querySelector?.('annotation');
+  if (annotation && annotation.textContent) {
+    return annotation.textContent.trim();
+  }
+  return '';
+}
+
 function escapeTableCell(text) {
   return text.replace(/\|/g, '\\|').replace(/\n+/g, '<br>');
 }
@@ -53,21 +65,32 @@ function tableToMarkdown(tableEl, ctx) {
 
   const headerTexts = headerCells.map((cell) => {
     const text = normalizeMarkdown(childrenToMarkdown(cell, ctx));
-    return escapeTableCell(text || '');
+    const span = Math.max(1, Number(cell.getAttribute('colspan')) || 1);
+    const items = [];
+    for (let i = 0; i < span; i += 1) {
+      items.push(escapeTableCell(text || ''));
+    }
+    return items;
   });
 
-  const alignRow = headerCells.map(() => '---');
+  const flatHeader = headerTexts.flat();
+  const alignRow = flatHeader.map(() => '---');
 
   const bodyRows = cellsByRow.filter((row) => row !== headerCells);
-  const bodyTexts = bodyRows.map((row) =>
-    row.map((cell) => {
+  const bodyTexts = bodyRows.map((row) => {
+    const rowTexts = [];
+    row.forEach((cell) => {
       const text = normalizeMarkdown(childrenToMarkdown(cell, ctx));
-      return escapeTableCell(text || '');
-    })
-  );
+      const span = Math.max(1, Number(cell.getAttribute('colspan')) || 1);
+      for (let i = 0; i < span; i += 1) {
+        rowTexts.push(escapeTableCell(text || ''));
+      }
+    });
+    return rowTexts;
+  });
 
   const lines = [];
-  lines.push(`| ${headerTexts.join(' | ')} |`);
+  lines.push(`| ${flatHeader.join(' | ')} |`);
   lines.push(`| ${alignRow.join(' | ')} |`);
   bodyTexts.forEach((row) => {
     const padded = row.length < headerTexts.length
@@ -92,8 +115,22 @@ function nodeToMarkdown(node, ctx) {
 
   const tag = node.tagName.toLowerCase();
 
+  if (node.classList?.contains('katex-display') || tag === 'math') {
+    const tex = extractKatexSource(node);
+    return tex ? `\n\n$$${tex}$$\n\n` : '';
+  }
+
+  if (node.classList?.contains('katex')) {
+    const tex = extractKatexSource(node);
+    return tex ? `$${tex}$` : '';
+  }
+
   if (tag === 'br') {
     return '\n';
+  }
+
+  if (tag === 'hr') {
+    return '\n\n---\n\n';
   }
 
   if (tag === 'code' && node.parentElement?.tagName.toLowerCase() !== 'pre') {
@@ -113,6 +150,10 @@ function nodeToMarkdown(node, ctx) {
 
   if (tag === 'em' || tag === 'i') {
     return `*${childrenToMarkdown(node, ctx)}*`;
+  }
+
+  if (tag === 'del' || tag === 's' || tag === 'strike') {
+    return `~~${childrenToMarkdown(node, ctx)}~~`;
   }
 
   if (tag === 'a') {
@@ -160,7 +201,7 @@ function nodeToMarkdown(node, ctx) {
     const isOrdered = tag === 'ol';
     const items = [];
     const prevList = ctx.list;
-    ctx.list = { ordered: isOrdered, index: 1, indent: (prevList?.indent || 0) + 2 };
+    ctx.list = { ordered: isOrdered, index: 1, indent: (prevList?.indent || 0) + 4 };
 
     Array.from(node.children).forEach((child) => {
       if (child.tagName.toLowerCase() === 'li') {
@@ -169,7 +210,8 @@ function nodeToMarkdown(node, ctx) {
     });
 
     ctx.list = prevList;
-    return `\n${items.join('')}\n`;
+    const listBody = items.join('').replace(/\n{3,}/g, '\n\n');
+    return ctx.inListItem ? `\n${listBody}` : `\n${listBody}\n`;
   }
 
   if (tag === 'li') {
@@ -178,16 +220,22 @@ function nodeToMarkdown(node, ctx) {
     if (list.ordered) {
       list.index += 1;
     }
-    const indent = ' '.repeat(Math.max(0, list.indent - 2));
-    const content = normalizeMarkdown(childrenToMarkdown(node, ctx));
+    const indent = ' '.repeat(Math.max(0, list.indent - 4));
+    const prevInListItem = ctx.inListItem;
+    ctx.inListItem = true;
+    const content = normalizeInlineMarkdown(childrenToMarkdown(node, ctx));
+    ctx.inListItem = prevInListItem;
     const lines = content.split('\n');
     const first = `${indent}${bullet}${lines.shift() || ''}`;
-    const rest = lines.map((line) => `${indent}  ${line}`).join('\n');
+    const rest = lines.map((line) => `${indent}    ${line}`).join('\n');
     return `${first}${rest ? `\n${rest}` : ''}\n`;
   }
 
   if (tag === 'p') {
     const content = childrenToMarkdown(node, ctx);
+    if (ctx.inListItem) {
+      return `\n${content}\n`;
+    }
     return `\n\n${content}\n\n`;
   }
 
