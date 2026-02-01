@@ -4,8 +4,13 @@
   "version": "1.0.0",
   "description": "Copy selected text or full ChatGPT responses to Markdown format",
   "permissions": [
-    "clipboardWrite"
+    "clipboardWrite",
+    "storage"
   ],
+  "options_ui": {
+    "page": "options.html",
+    "open_in_tab": true
+  },
   "host_permissions": [
     "https://chatgpt.com/*",
     "https://chat.openai.com/*"

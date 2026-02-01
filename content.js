@@ -93,12 +93,12 @@ function showToast(message) {
   }, 2000);
 }
 
-// Всплывающая кнопка для выделения текста
+// Кнопка в bubble "Ask ChatGPT"
 
-let floatingButton = null;
 let bubbleButton = null;
 let bubbleInsertTimer = null;
 let bubbleInsertAttempts = 0;
+let isExtensionEnabled = true;
 let lastSelectionText = '';
 
 /**
@@ -120,48 +120,6 @@ function isValidSelection() {
 /**
  * Создание всплывающей кнопки
  */
-function createFloatingButton() {
-  if (floatingButton) {
-    return floatingButton;
-  }
-
-  const button = document.createElement('button');
-  button.className = 'ce-floating-copy-button';
-  button.textContent = 'MD';
-  button.setAttribute('aria-label', 'Copy to Markdown');
-
-  button.addEventListener('click', async (e) => {
-    e.stopPropagation();
-    const selection = window.getSelection();
-    const text = (selection && selection.rangeCount > 0 ? selection.toString() : '') || lastSelectionText;
-    if (!text || text.trim().length === 0) {
-      showToast('Nothing to copy');
-      return;
-    }
-    const markdown = toBlockquote(text);
-    const success = await copyToClipboard(markdown);
-    if (success) {
-      showToast('Copied to Markdown');
-    } else {
-      showToast(`Copy failed${lastCopyError ? `: ${lastCopyError}` : ''}`);
-    }
-    // Снимаем выделение после копирования
-    selection?.removeAllRanges();
-    removeFloatingButton();
-  });
-
-  button.addEventListener('mousedown', () => {
-    const selection = window.getSelection();
-    const text = selection ? selection.toString().trim() : '';
-    if (text.length > 0) {
-      lastSelectionText = text;
-    }
-  });
-
-  floatingButton = button;
-  return button;
-}
-
 function findAskBubbleContainer() {
   const buttons = Array.from(document.querySelectorAll('button'));
   const askButton = buttons.find((btn) => {
@@ -211,37 +169,9 @@ function createBubbleButton() {
 }
 
 /**
- * Позиционирование всплывающей кнопки
- */
-function positionFloatingButton() {
-  const selection = window.getSelection();
-  if (!selection || selection.rangeCount === 0) {
-    return;
-  }
-
-  const range = selection.getRangeAt(0);
-  const rect = range.getBoundingClientRect();
-
-  const button = createFloatingButton();
-  document.body.appendChild(button);
-
-  // Позиционируем кнопку справа от выделения, немного выше
-  const buttonRect = button.getBoundingClientRect();
-  const top = rect.top + window.scrollY - buttonRect.height - 8;
-  const left = rect.right + window.scrollX + 8;
-
-  button.style.top = `${Math.max(8, top)}px`;
-  button.style.left = `${left}px`;
-}
-
-/**
  * Удаление всплывающей кнопки
  */
 function removeFloatingButton() {
-  if (floatingButton && floatingButton.parentNode) {
-    floatingButton.remove();
-  }
-  floatingButton = null;
   if (bubbleButton && bubbleButton.parentNode) {
     bubbleButton.remove();
   }
@@ -278,6 +208,11 @@ function tryInsertBubbleButton() {
  * Обработка выделения текста
  */
 function handleSelection() {
+  if (!isExtensionEnabled) {
+    removeFloatingButton();
+    return;
+  }
+
   if (isValidSelection()) {
     tryInsertBubbleButton();
   } else {
@@ -297,22 +232,12 @@ document.addEventListener('keyup', (e) => {
   }
 });
 
-// Клик вне выделения для скрытия кнопки
-document.addEventListener('click', (e) => {
-  if (floatingButton && !floatingButton.contains(e.target)) {
-    const selection = window.getSelection();
-    if (!selection || selection.toString().trim().length === 0) {
-      removeFloatingButton();
-    }
-  }
-});
-
 // Кнопка "Copy MD" под ответом
 
 /**
  * Поиск контейнера кнопок для сообщения
  */
-function findButtonContainer(messageElement, { allowFallback = true } = {}) {
+function findButtonContainer(messageElement) {
   // Ищем контейнер с кнопками действий (Copy, Share, Regenerate и т.д.)
   // ChatGPT обычно использует контейнеры с кнопками рядом с сообщением
   
@@ -346,15 +271,7 @@ function findButtonContainer(messageElement, { allowFallback = true } = {}) {
     return actionContainer;
   }
 
-  // Вариант 3: Создаем новый контейнер, если не нашли
-  if (!allowFallback) {
-    return null;
-  }
-  const fallback = document.createElement('div');
-  fallback.className = 'ce-copy-md-fallback-container';
-  fallback.style.marginTop = '8px';
-  messageElement.appendChild(fallback);
-  return fallback;
+  return null;
 }
 
 /**
@@ -415,12 +332,15 @@ function extractMessageText(messageElement) {
  * Добавление кнопки Copy MD к сообщению
  */
 function addCopyMDButtonToMessage(messageElement) {
+  if (!isExtensionEnabled) {
+    return;
+  }
   // Проверяем, не добавлена ли уже кнопка
   if (messageElement.querySelector('.ce-copy-md-button') || messageElement.dataset.ceCopyMdInjected === '1') {
     return;
   }
 
-  const buttonContainer = findButtonContainer(messageElement, { allowFallback: false });
+  const buttonContainer = findButtonContainer(messageElement);
   if (!buttonContainer) {
     return;
   }
@@ -458,6 +378,9 @@ function addCopyMDButtonToMessage(messageElement) {
 const pendingInsertions = new WeakMap();
 
 function scheduleAddButton(messageElement) {
+  if (!isExtensionEnabled) {
+    return;
+  }
   if (!messageElement) return;
   const existing = pendingInsertions.get(messageElement);
   if (existing) {
@@ -471,7 +394,7 @@ function scheduleAddButton(messageElement) {
       return;
     }
     // Ждем появления стандартной панели действий
-    const container = findButtonContainer(messageElement, { allowFallback: false });
+    const container = findButtonContainer(messageElement);
     if (!container) {
       scheduleAddButton(messageElement);
       return;
@@ -485,6 +408,9 @@ function scheduleAddButton(messageElement) {
  * Поиск всех сообщений ассистента и добавление кнопок
  */
 function processAssistantMessages() {
+  if (!isExtensionEnabled) {
+    return;
+  }
   const turnArticles = document.querySelectorAll('article[data-testid^="conversation-turn-"]');
   if (turnArticles.length > 0) {
     turnArticles.forEach((article) => {
@@ -588,3 +514,38 @@ observer.observe(document.body, {
   childList: true,
   subtree: true
 });
+
+function removeAllInjectedButtons() {
+  document.querySelectorAll('.ce-copy-md-button, .ce-bubble-copy-button').forEach((btn) => btn.remove());
+  document.querySelectorAll('[data-ce-copy-md-injected]').forEach((el) => {
+    delete el.dataset.ceCopyMdInjected;
+  });
+}
+
+function setExtensionEnabled(nextValue) {
+  isExtensionEnabled = !!nextValue;
+  if (!isExtensionEnabled) {
+    removeFloatingButton();
+    removeAllInjectedButtons();
+  } else {
+    processAssistantMessages();
+  }
+}
+
+function initSettings() {
+  if (!chrome?.storage?.sync) {
+    setExtensionEnabled(true);
+    return;
+  }
+  chrome.storage.sync.get({ enabled: true }, (result) => {
+    setExtensionEnabled(result.enabled !== false);
+  });
+  chrome.storage.onChanged.addListener((changes, area) => {
+    if (area !== 'sync') return;
+    if (changes.enabled) {
+      setExtensionEnabled(changes.enabled.newValue !== false);
+    }
+  });
+}
+
+initSettings();
