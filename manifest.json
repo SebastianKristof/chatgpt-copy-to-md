@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
-  "name": "ChatGPT → Markdown Copier",
-  "version": "1.0.0",
-  "description": "Copy selected text or full ChatGPT responses to Markdown format",
+  "name": "ChatGPT Copy as Markdown",
+  "version": "1.1.0",
+  "description": "One-click copy from ChatGPT to Markdown. Preserves formatting, code, tables, and math.",
   "permissions": [
     "clipboardWrite",
     "storage"
