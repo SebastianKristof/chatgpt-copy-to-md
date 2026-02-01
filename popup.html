@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Copy to MD</title>
+    <link rel="stylesheet" href="popup.css" />
+  </head>
+  <body>
+    <main class="panel">
+      <div class="row">
+        <div>
+          <div class="title">ChatGPT to Markdown Copier</div>
+          <div class="subtitle">Toggle extension on ChatGPT pages</div>
+        </div>
+        <label class="switch">
+          <input id="enabled" type="checkbox" />
+          <span class="slider" aria-hidden="true"></span>
+        </label>
+      </div>
+      <div class="row row-compact">
+        <button id="open-options" type="button" class="link">Open options</button>
+        <button id="open-shortcuts" type="button" class="link">Set shortcut</button>
+      </div>
+      <div class="hint" id="shortcut-hint"></div>
+    </main>
+    <script src="popup.js"></script>
+  </body>
+</html>

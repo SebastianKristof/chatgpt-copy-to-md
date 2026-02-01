@@ -7,6 +7,22 @@
     "clipboardWrite",
     "storage"
   ],
+  "action": {
+    "default_popup": "popup.html",
+    "default_title": "Copy to Markdown"
+  },
+  "background": {
+    "service_worker": "background.js"
+  },
+  "commands": {
+    "toggle-extension": {
+      "suggested_key": {
+        "default": "Ctrl+Shift+M",
+        "mac": "Command+Shift+M"
+      },
+      "description": "Toggle ChatGPT to Markdown Copier"
+    }
+  },
   "options_ui": {
     "page": "options.html",
     "open_in_tab": true
