@@ -30,6 +30,7 @@ function normalizeMarkdown(md) {
   return md
     .replace(/[ \t]+\n/g, '\n')
     .replace(/\n{3,}/g, '\n\n')
+    .replace(/(#{1,6} [^\n]+)\n\n(?=(?:- |\d+\. ))/g, '$1\n')
     .trim();
 }
 
