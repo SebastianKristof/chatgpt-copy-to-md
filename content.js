@@ -444,6 +444,32 @@ function handleSelection() {
     return;
   }
 
+  const selection = window.getSelection();
+  if (selection && selection.rangeCount > 0) {
+    const container = selection.getRangeAt(0).commonAncestorContainer;
+    const element = container.nodeType === Node.ELEMENT_NODE ? container : container.parentElement;
+    const focusEl = selection.focusNode && selection.focusNode.nodeType === Node.ELEMENT_NODE
+      ? selection.focusNode
+      : selection.focusNode?.parentElement;
+    const anchorEl = selection.anchorNode && selection.anchorNode.nodeType === Node.ELEMENT_NODE
+      ? selection.anchorNode
+      : selection.anchorNode?.parentElement;
+    const activeEl = document.activeElement;
+
+    const isComposerNode = (el) => !!el?.closest?.(
+      'textarea, input, [contenteditable="true"], [role="textbox"], [data-testid*="composer"], [data-testid="prompt-textarea"]'
+    );
+
+    const inComposer = isComposerNode(element) || isComposerNode(focusEl) || isComposerNode(anchorEl) ||
+      isComposerNode(activeEl);
+    const inUserMessage = element?.closest?.('[data-message-author-role="user"]');
+
+    if (inComposer || inUserMessage) {
+      removeFloatingButton();
+      return;
+    }
+  }
+
   if (isValidSelection()) {
     tryInsertBubbleButton();
   } else {
