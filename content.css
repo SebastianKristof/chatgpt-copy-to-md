@@ -1,0 +1,149 @@
+/* Всплывающая кнопка для выделения */
+.ce-floating-copy-button {
+  position: fixed;
+  z-index: 10000;
+  background: #ffffff;
+  border: 1px solid #d1d5db;
+  border-radius: 20px;
+  padding: 6px 12px;
+  font-size: 12px;
+  font-weight: 500;
+  color: #374151;
+  cursor: pointer;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 40px;
+  height: 32px;
+  transition: all 0.2s ease;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+}
+
+.ce-bubble-copy-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 12px;
+  background: transparent;
+  border: none;
+  color: #374151;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 600;
+  font-family: inherit;
+}
+
+.ce-bubble-copy-button:hover {
+  background: rgba(0, 0, 0, 0.05);
+}
+
+.ce-bubble-copy-button__icon {
+  width: 16px;
+  height: 16px;
+  display: inline-block;
+  background: currentColor;
+  -webkit-mask: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'><path d='M9 3h8a2 2 0 0 1 2 2v8h-2V5H9V3z'/><path d='M5 7h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V9a2 2 0 0 1 2-2zm0 2v8h8V9H5z'/></svg>") center / contain no-repeat;
+  mask: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'><path d='M9 3h8a2 2 0 0 1 2 2v8h-2V5H9V3z'/><path d='M5 7h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V9a2 2 0 0 1 2-2zm0 2v8h8V9H5z'/></svg>") center / contain no-repeat;
+}
+
+.ce-floating-copy-button:hover {
+  background: #f9fafb;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+  transform: translateY(-1px);
+}
+
+.ce-floating-copy-button:active {
+  transform: translateY(0);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+}
+
+/* Кнопка Copy MD под ответом */
+.ce-copy-md-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 6px 10px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #374151;
+  background: rgba(0, 0, 0, 0.04);
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  border-radius: 10px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-family: inherit;
+  margin-left: 4px;
+}
+
+.ce-copy-md-button:hover {
+  background: rgba(0, 0, 0, 0.08);
+  border-color: rgba(0, 0, 0, 0.14);
+}
+
+.ce-copy-md-button:active {
+  transform: translateY(0.5px);
+  background: rgba(0, 0, 0, 0.12);
+}
+
+.ce-copy-md-button__icon {
+  display: inline-flex;
+  width: 16px;
+  height: 16px;
+}
+
+.ce-copy-md-button__icon svg {
+  width: 16px;
+  height: 16px;
+  fill: currentColor;
+}
+
+.ce-copy-md-button__label {
+  letter-spacing: 0.01em;
+}
+
+.ce-copy-md-fallback-container {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+/* Toast уведомление */
+.ce-toast {
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  z-index: 10001;
+  background: #1f2937;
+  color: #ffffff;
+  padding: 12px 20px;
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  font-size: 14px;
+  font-weight: 500;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  animation: ce-toast-slide-in 0.3s ease-out, ce-toast-fade-out 0.3s ease-in 1.7s forwards;
+  pointer-events: none;
+}
+
+@keyframes ce-toast-slide-in {
+  from {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+@keyframes ce-toast-fade-out {
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0;
+    transform: translateX(100%);
+  }
+}
