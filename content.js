@@ -33,6 +33,52 @@ function normalizeMarkdown(md) {
     .trim();
 }
 
+function escapeTableCell(text) {
+  return text.replace(/\|/g, '\\|').replace(/\n+/g, '<br>');
+}
+
+function tableToMarkdown(tableEl, ctx) {
+  const rows = Array.from(tableEl.querySelectorAll('tr'));
+  if (rows.length === 0) return '';
+
+  const cellsByRow = rows.map((row) =>
+    Array.from(row.children).filter((cell) =>
+      cell.tagName && (cell.tagName.toLowerCase() === 'th' || cell.tagName.toLowerCase() === 'td')
+    )
+  );
+
+  const headerCells = cellsByRow.find((row) =>
+    row.some((cell) => cell.tagName.toLowerCase() === 'th')
+  ) || cellsByRow[0];
+
+  const headerTexts = headerCells.map((cell) => {
+    const text = normalizeMarkdown(childrenToMarkdown(cell, ctx));
+    return escapeTableCell(text || '');
+  });
+
+  const alignRow = headerCells.map(() => '---');
+
+  const bodyRows = cellsByRow.filter((row) => row !== headerCells);
+  const bodyTexts = bodyRows.map((row) =>
+    row.map((cell) => {
+      const text = normalizeMarkdown(childrenToMarkdown(cell, ctx));
+      return escapeTableCell(text || '');
+    })
+  );
+
+  const lines = [];
+  lines.push(`| ${headerTexts.join(' | ')} |`);
+  lines.push(`| ${alignRow.join(' | ')} |`);
+  bodyTexts.forEach((row) => {
+    const padded = row.length < headerTexts.length
+      ? row.concat(Array(headerTexts.length - row.length).fill(''))
+      : row;
+    lines.push(`| ${padded.join(' | ')} |`);
+  });
+
+  return `\n\n${lines.join('\n')}\n\n`;
+}
+
 function nodeToMarkdown(node, ctx) {
   if (!node) return '';
 
@@ -83,8 +129,31 @@ function nodeToMarkdown(node, ctx) {
 
   if (tag === 'blockquote') {
     const inner = normalizeMarkdown(childrenToMarkdown(node, ctx));
-    const lines = inner.split('\n').map((line) => `> ${line}`);
+    const rawLines = inner.split('\n');
+    const trimmedLines = [];
+    for (let i = 0; i < rawLines.length; i += 1) {
+      const line = rawLines[i];
+      if (trimmedLines.length === 0 && line.trim() === '') {
+        continue;
+      }
+      trimmedLines.push(line);
+    }
+    while (trimmedLines.length > 0 && trimmedLines[trimmedLines.length - 1].trim() === '') {
+      trimmedLines.pop();
+    }
+    const collapsed = [];
+    trimmedLines.forEach((line) => {
+      if (line.trim() === '' && collapsed.length > 0 && collapsed[collapsed.length - 1].trim() === '') {
+        return;
+      }
+      collapsed.push(line);
+    });
+    const lines = collapsed.map((line) => `> ${line}`);
     return `\n\n${lines.join('\n')}\n\n`;
+  }
+
+  if (tag === 'table') {
+    return tableToMarkdown(node, ctx);
   }
 
   if (tag === 'ul' || tag === 'ol') {
