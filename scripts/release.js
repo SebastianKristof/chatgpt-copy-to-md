@@ -143,7 +143,8 @@ function createReleaseZip(version, extensionName) {
 }
 
 function usage() {
-  console.log('Usage: node scripts/release.js <zip|auto|patch|minor|major|set <x.y.z>>');
+  console.log('Usage: node scripts/release.js [zip|auto|patch|minor|major|set <x.y.z>]');
+  console.log('If omitted, action defaults to: minor');
 }
 
 function assertGitReadyForRelease() {
@@ -182,20 +183,28 @@ function createReleaseCommitAndTag(version) {
   console.log(`Created git commit and tag: ${tagName}`);
 }
 
+function runQualityChecks() {
+  console.log('\nRunning quality checks...');
+  run('npm', ['run', 'lint']);
+  run('npm', ['run', 'test']);
+  run('npm', ['run', 'test:e2e']);
+}
+
 function main() {
-  const action = process.argv[2];
-  if (!action) {
-    usage();
-    process.exit(1);
+  const action = process.argv[2] || 'minor';
+  if (!process.argv[2]) {
+    console.log('No release action specified; defaulting to minor.');
   }
 
   let nextVersion = null;
   const current = syncVersions();
   let shouldTag = false;
 
-  if (action === 'auto' || action === 'patch' || action === 'minor' || action === 'major') {
-    const bumpType = action === 'auto' ? 'minor' : action;
-    nextVersion = bump(current.packageJson.version, bumpType);
+  if (action === 'patch' || action === 'minor' || action === 'major') {
+    nextVersion = bump(current.packageJson.version, action);
+    shouldTag = true;
+  } else if (action === 'auto') {
+    nextVersion = bump(current.packageJson.version, 'minor');
     shouldTag = true;
   } else if (action === 'set') {
     nextVersion = process.argv[3];
@@ -223,14 +232,7 @@ function main() {
     console.log(`Using current version: ${current.packageJson.version}`);
   }
 
-  console.log('Running release checks via npm run test:unit');
-  run('npm', ['run', 'test:unit']);
-  if (process.env.RELEASE_RUN_E2E === '1') {
-    console.log('Running release checks via npm run test:e2e');
-    run('npm', ['run', 'test:e2e']);
-  } else {
-    console.log('Skipping e2e checks for release (set RELEASE_RUN_E2E=1 to enforce).');
-  }
+  runQualityChecks();
   run('npm', ['run', 'build']);
   createReleaseZip(finalState.packageJson.version, finalState.manifest.name);
 
