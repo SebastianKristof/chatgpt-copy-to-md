@@ -14,7 +14,7 @@ test.describe('Copy buttons', () => {
     }
   });
 
-  test('injects Copy to MD button and updates styles after theme toggle', async () => {
+  test('injects Copy as MD button and updates styles after theme toggle', async () => {
     context = await setupExtension();
     page = await openMockConversation(context, { conversationId: 'copy-button-theme', theme: 'light' });
 
@@ -40,7 +40,7 @@ test.describe('Copy buttons', () => {
       .toContain('229, 231, 235');
   });
 
-  test('shows bubble Copy to MD button for text selection in dark mode', async () => {
+  test('shows bubble Copy as MD button for text selection in dark mode', async () => {
     context = await setupExtension();
     page = await openMockConversation(context, { conversationId: 'bubble-dark', theme: 'dark' });
 

@@ -27,11 +27,14 @@ function getCodeBlockLanguage(codeEl) {
 }
 
 function normalizeMarkdown(md) {
-  return md
+  const normalized = md
     .replace(/[ \t]+\n/g, '\n')
     .replace(/\n{3,}/g, '\n\n')
+    .replace(/([,;:—-])\n\n(?=[^\n])/g, '$1\n')
     .replace(/(#{1,6} [^\n]+)\n\n(?=(?:- |\d+\. ))/g, '$1\n')
     .trim();
+
+  return normalized;
 }
 
 function normalizeInlineMarkdown(md) {
@@ -466,10 +469,10 @@ function createBubbleButton() {
   const button = document.createElement('button');
   button.className = 'ce-bubble-copy-button';
   button.type = 'button';
-  button.setAttribute('aria-label', 'Copy selection to Markdown');
+  button.setAttribute('aria-label', 'Copy selection as Markdown');
   button.innerHTML = `
     <span class="ce-bubble-copy-button__icon" aria-hidden="true"></span>
-    <span class="ce-bubble-copy-button__label">Copy to MD</span>
+    <span class="ce-bubble-copy-button__label">Copy as MD</span>
   `;
 
   button.addEventListener('click', async (e) => {
@@ -659,7 +662,7 @@ function findButtonContainer(messageElement) {
 function createCopyMDButton() {
   const button = document.createElement('button');
   button.className = 'ce-copy-md-button';
-  button.setAttribute('aria-label', 'Copy full response to Markdown');
+  button.setAttribute('aria-label', 'Copy full response as Markdown');
   button.type = 'button';
 
   const icon = document.createElement('span');
@@ -673,7 +676,7 @@ function createCopyMDButton() {
 
   const label = document.createElement('span');
   label.className = 'ce-copy-md-button__label';
-  label.textContent = 'Copy to MD';
+  label.textContent = 'Copy as MD';
 
   button.appendChild(icon);
   button.appendChild(label);

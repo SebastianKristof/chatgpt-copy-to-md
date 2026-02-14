@@ -103,6 +103,43 @@ test('htmlToMarkdown converts tables to markdown table syntax', () => {
   dom.window.close();
 });
 
+test('htmlToMarkdown collapses continuation-only paragraph breaks', () => {
+  const dom = loadContentScript();
+  const { window } = dom;
+  const root = window.document.createElement('div');
+  root.innerHTML = `
+    <h1>Вопрос тебе</h1>
+    <p>Когда ты чувствуешь эту неловкость —</p>
+    <p>она больше в клиенте (он теряется),</p>
+    <p>или ты сам внутри чуть напрягаешься в момент начала?</p>
+  `;
+
+  const markdown = window.htmlToMarkdown(root);
+
+  assert.match(markdown, /# Вопрос тебе/);
+  assert.match(markdown, /неловкость —\nона больше в клиенте \(он теряется\),\nили ты сам/);
+  assert.doesNotMatch(markdown, /неловкость —\n\nона больше/);
+  dom.window.close();
+});
+
+test('htmlToMarkdown keeps single-line breaks for one paragraph with br tags', () => {
+  const dom = loadContentScript();
+  const { window } = dom;
+  const root = window.document.createElement('div');
+  root.innerHTML = `
+    <p data-start="2483" data-end="2612" data-is-last-node="" data-is-only-node="">Когда ты чувствуешь эту неловкость —<br data-start="2519" data-end="2522">
+она больше в клиенте (он теряется),<br data-start="2557" data-end="2560">
+или ты сам внутри чуть напрягаешься в момент начала?</p>
+  `;
+
+  const markdown = window.htmlToMarkdown(root);
+
+  assert.match(markdown, /неловкость —\nона больше в клиенте \(он теряется\),\nили ты сам внутри/);
+  assert.doesNotMatch(markdown, /неловкость —\n\nона больше/);
+  assert.doesNotMatch(markdown, /теряется\),\n\nили ты сам/);
+  dom.window.close();
+});
+
 test('shouldUseDarkTheme returns true when dark theme attributes are present', () => {
   const dom = loadContentScript({
     html: '<!doctype html><html data-theme="dark"><body></body></html>',
