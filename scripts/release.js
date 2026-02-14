@@ -2,7 +2,6 @@
 
 import { spawnSync } from 'node:child_process';
 import {
-  copyFileSync,
   existsSync,
   mkdirSync,
   readFileSync,
@@ -17,7 +16,6 @@ const MANIFEST_PATH = path.join(ROOT, 'manifest.json');
 const LOCK_PATH = path.join(ROOT, 'package-lock.json');
 const DIST_DIR = path.join(ROOT, 'dist');
 const RELEASE_DIR = path.join(ROOT, 'release');
-const DIST_ZIP_PATH = path.join(ROOT, 'dist.zip');
 
 function fail(message) {
   console.error(`Error: ${message}`);
@@ -140,14 +138,12 @@ function createReleaseZip(version, extensionName) {
   rmSync(artifactPath, { force: true });
 
   run('zip', ['-r', '-q', artifactPath, '.'], { cwd: DIST_DIR });
-  copyFileSync(artifactPath, DIST_ZIP_PATH);
 
   console.log(`\nRelease artifact: ${path.relative(ROOT, artifactPath)}`);
-  console.log(`Updated latest artifact: ${path.relative(ROOT, DIST_ZIP_PATH)}`);
 }
 
 function usage() {
-  console.log('Usage: node scripts/release.js <zip|patch|minor|major|set <x.y.z>>');
+  console.log('Usage: node scripts/release.js <zip|auto|patch|minor|major|set <x.y.z>>');
 }
 
 function assertGitReadyForRelease() {
@@ -197,8 +193,9 @@ function main() {
   const current = syncVersions();
   let shouldTag = false;
 
-  if (action === 'patch' || action === 'minor' || action === 'major') {
-    nextVersion = bump(current.packageJson.version, action);
+  if (action === 'auto' || action === 'patch' || action === 'minor' || action === 'major') {
+    const bumpType = action === 'auto' ? 'minor' : action;
+    nextVersion = bump(current.packageJson.version, bumpType);
     shouldTag = true;
   } else if (action === 'set') {
     nextVersion = process.argv[3];
@@ -207,7 +204,9 @@ function main() {
     }
     parseSemver(nextVersion);
     shouldTag = true;
-  } else if (action !== 'zip') {
+  } else if (action === 'zip') {
+    // Manual mode: build and package current version without bump/tag.
+  } else {
     usage();
     process.exit(1);
   }
