@@ -4,7 +4,7 @@
  */
 
 import { build } from 'esbuild';
-import { readFileSync, writeFileSync, mkdirSync, existsSync, cpSync } from 'fs';
+import { readFileSync, writeFileSync, mkdirSync, existsSync, cpSync, rmSync } from 'fs';
 import { dirname, join } from 'path';
 import { fileURLToPath } from 'url';
 
@@ -54,6 +54,7 @@ async function copyFile(file) {
 async function runBuild() {
   try {
     console.log('Starting build...');
+    rmSync(distDir, { recursive: true, force: true });
     ensureDir(distDir);
 
     await buildJS('content.js', join(distDir, 'content.js'));

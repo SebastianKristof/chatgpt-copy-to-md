@@ -169,7 +169,7 @@ function createReleaseCommitAndTag(version) {
     fail(`Tag ${tagName} already exists.`);
   }
 
-  const filesToAdd = ['package.json', 'manifest.json', 'dist.zip'];
+  const filesToAdd = ['package.json', 'manifest.json'];
   if (existsSync(LOCK_PATH)) {
     filesToAdd.push('package-lock.json');
   }
@@ -224,7 +224,14 @@ function main() {
     console.log(`Using current version: ${current.packageJson.version}`);
   }
 
-  run('npm', ['run', 'test']);
+  console.log('Running release checks via npm run test:unit');
+  run('npm', ['run', 'test:unit']);
+  if (process.env.RELEASE_RUN_E2E === '1') {
+    console.log('Running release checks via npm run test:e2e');
+    run('npm', ['run', 'test:e2e']);
+  } else {
+    console.log('Skipping e2e checks for release (set RELEASE_RUN_E2E=1 to enforce).');
+  }
   run('npm', ['run', 'build']);
   createReleaseZip(finalState.packageJson.version, finalState.manifest.name);
 
