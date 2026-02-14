@@ -1,0 +1,1 @@
+(()=>{function t(e){chrome.storage.sync.set({enabled:e})}chrome.runtime.onInstalled.addListener(()=>{chrome.storage.sync.get({enabled:!0},e=>{typeof e.enabled!="boolean"&&chrome.storage.sync.set({enabled:!0})})});chrome.commands.onCommand.addListener(e=>{e==="toggle-extension"&&chrome.storage.sync.get({enabled:!0},n=>{t(!n.enabled)})});})();

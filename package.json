@@ -8,6 +8,6 @@
     "zip": "node build.js && (cd dist && zip -r ../dist.zip .)"
   },
   "devDependencies": {
-    "esbuild": "^0.20.2"
+    "esbuild": "^0.27.2"
   }
 }

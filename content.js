@@ -329,6 +329,104 @@ let bubbleInsertTimer = null;
 let bubbleInsertAttempts = 0;
 let isExtensionEnabled = true;
 let lastSelectionText = '';
+const THEME_DATA_ATTR = 'data-ce-copy-md-theme';
+let themeMutationObserver = null;
+let prefersDarkQuery = null;
+
+function parseRgbColor(colorValue) {
+  if (!colorValue) {
+    return null;
+  }
+  const matches = colorValue.match(/[\d.]+/g);
+  if (!matches || matches.length < 3) {
+    return null;
+  }
+  const [r, g, b] = matches.slice(0, 3).map(Number);
+  const alpha = matches[3] !== undefined ? Number(matches[3]) : 1;
+  if ([r, g, b, alpha].some((value) => Number.isNaN(value))) {
+    return null;
+  }
+  return { r, g, b, alpha };
+}
+
+function isDarkColor(colorValue) {
+  const rgb = parseRgbColor(colorValue);
+  if (!rgb) {
+    return false;
+  }
+  const { r, g, b, alpha } = rgb;
+  if (alpha <= 0.01) {
+    return false;
+  }
+  const luminance = ((0.2126 * r) + (0.7152 * g) + (0.0722 * b)) / 255;
+  return luminance < 0.45;
+}
+
+function shouldUseDarkTheme() {
+  const root = document.documentElement;
+  const body = document.body;
+  if (!root) {
+    return false;
+  }
+
+  const themeTokens = [
+    root.getAttribute('data-theme'),
+    root.getAttribute('data-color-scheme'),
+    body?.getAttribute('data-theme'),
+    body?.getAttribute('data-color-scheme')
+  ]
+    .filter(Boolean)
+    .join(' ')
+    .toLowerCase();
+
+  if (themeTokens.includes('dark')) {
+    return true;
+  }
+
+  const classTokens = `${root.className || ''} ${body?.className || ''}`.toLowerCase();
+  if (/\b(dark|theme-dark)\b/.test(classTokens)) {
+    return true;
+  }
+
+  const rootStyle = getComputedStyle(root);
+  const bodyStyle = body ? getComputedStyle(body) : null;
+  const colorScheme = `${rootStyle.colorScheme || ''} ${bodyStyle?.colorScheme || ''}`.toLowerCase();
+  if (colorScheme.includes('dark') && !colorScheme.includes('light')) {
+    return true;
+  }
+
+  const background = bodyStyle?.backgroundColor || rootStyle.backgroundColor;
+  if (isDarkColor(background)) {
+    return true;
+  }
+
+  return !!window.matchMedia?.('(prefers-color-scheme: dark)').matches;
+}
+
+function updateThemeAttribute() {
+  const nextTheme = shouldUseDarkTheme() ? 'dark' : 'light';
+  document.documentElement.setAttribute(THEME_DATA_ATTR, nextTheme);
+}
+
+function initThemeDetection() {
+  updateThemeAttribute();
+
+  const attributeFilter = ['class', 'style', 'data-theme', 'data-color-scheme'];
+  themeMutationObserver = new MutationObserver(() => {
+    updateThemeAttribute();
+  });
+  themeMutationObserver.observe(document.documentElement, { attributes: true, attributeFilter });
+  if (document.body) {
+    themeMutationObserver.observe(document.body, { attributes: true, attributeFilter });
+  }
+
+  prefersDarkQuery = window.matchMedia?.('(prefers-color-scheme: dark)') || null;
+  if (prefersDarkQuery?.addEventListener) {
+    prefersDarkQuery.addEventListener('change', updateThemeAttribute);
+  } else if (prefersDarkQuery?.addListener) {
+    prefersDarkQuery.addListener(updateThemeAttribute);
+  }
+}
 
 /**
  * Проверка валидности выделения
@@ -764,6 +862,8 @@ function processAssistantMessages() {
 }
 
 // Инициализация при загрузке страницы
+initThemeDetection();
+
 if (document.readyState === 'loading') {
   document.addEventListener('DOMContentLoaded', processAssistantMessages);
 } else {

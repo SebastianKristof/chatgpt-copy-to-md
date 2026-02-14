@@ -1,3 +1,27 @@
+:root {
+  --ce-copy-text: #374151;
+  --ce-bubble-hover-bg: rgba(0, 0, 0, 0.05);
+  --ce-copy-btn-bg: rgba(0, 0, 0, 0.04);
+  --ce-copy-btn-border: rgba(0, 0, 0, 0.08);
+  --ce-copy-btn-hover-bg: rgba(0, 0, 0, 0.08);
+  --ce-copy-btn-hover-border: rgba(0, 0, 0, 0.14);
+  --ce-copy-btn-active-bg: rgba(0, 0, 0, 0.12);
+  --ce-toast-bg: #1f2937;
+  --ce-toast-color: #ffffff;
+}
+
+:root[data-ce-copy-md-theme="dark"] {
+  --ce-copy-text: #e5e7eb;
+  --ce-bubble-hover-bg: rgba(255, 255, 255, 0.14);
+  --ce-copy-btn-bg: rgba(255, 255, 255, 0.12);
+  --ce-copy-btn-border: rgba(255, 255, 255, 0.28);
+  --ce-copy-btn-hover-bg: rgba(255, 255, 255, 0.2);
+  --ce-copy-btn-hover-border: rgba(255, 255, 255, 0.4);
+  --ce-copy-btn-active-bg: rgba(255, 255, 255, 0.26);
+  --ce-toast-bg: #111827;
+  --ce-toast-color: #f9fafb;
+}
+
 .ce-bubble-copy-button {
   display: inline-flex;
   align-items: center;
@@ -5,7 +29,7 @@
   padding: 8px 12px;
   background: transparent;
   border: none;
-  color: #374151;
+  color: var(--ce-copy-text);
   cursor: pointer;
   font-size: 13px;
   font-weight: 600;
@@ -13,7 +37,7 @@
 }
 
 .ce-bubble-copy-button:hover {
-  background: rgba(0, 0, 0, 0.05);
+  background: var(--ce-bubble-hover-bg);
 }
 
 .ce-bubble-copy-button__icon {
@@ -34,9 +58,9 @@
   padding: 6px 10px;
   font-size: 12px;
   font-weight: 600;
-  color: #374151;
-  background: rgba(0, 0, 0, 0.04);
-  border: 1px solid rgba(0, 0, 0, 0.08);
+  color: var(--ce-copy-text);
+  background: var(--ce-copy-btn-bg);
+  border: 1px solid var(--ce-copy-btn-border);
   border-radius: 10px;
   cursor: pointer;
   transition: all 0.2s ease;
@@ -45,13 +69,13 @@
 }
 
 .ce-copy-md-button:hover {
-  background: rgba(0, 0, 0, 0.08);
-  border-color: rgba(0, 0, 0, 0.14);
+  background: var(--ce-copy-btn-hover-bg);
+  border-color: var(--ce-copy-btn-hover-border);
 }
 
 .ce-copy-md-button:active {
   transform: translateY(0.5px);
-  background: rgba(0, 0, 0, 0.12);
+  background: var(--ce-copy-btn-active-bg);
 }
 
 .ce-copy-md-button__icon {
@@ -76,8 +100,8 @@
   bottom: 20px;
   right: 20px;
   z-index: 10001;
-  background: #1f2937;
-  color: #ffffff;
+  background: var(--ce-toast-bg);
+  color: var(--ce-toast-color);
   padding: 12px 20px;
   border-radius: 8px;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
